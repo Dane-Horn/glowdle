@@ -50,6 +50,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	if err := s.Shutdown(ctx); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
-		log.Error("Could not stop server", "error", err)
+		log.Error("Could not stop SSH server", "error", err)
 	}
 }
