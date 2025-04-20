@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"glowdle/apps/wordle"
 	"net"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/activeterm"
+	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
 )
 
@@ -27,7 +29,7 @@ func main() {
 		wish.WithAddress(net.JoinHostPort(host, port)),
 		wish.WithHostKeyPath(".ssh/id_ed25519"),
 		wish.WithMiddleware(
-			// add handler
+			bubbletea.Middleware(wordle.Handler),
 			activeterm.Middleware(),
 			logging.Middleware(),
 		),
@@ -48,7 +50,7 @@ func main() {
 
 	<-done
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+	defer func() { cancel() }()
 	if err := s.Shutdown(ctx); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
 		log.Error("Could not stop server", "error", err)
 	}

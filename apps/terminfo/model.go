@@ -8,6 +8,7 @@ import (
 )
 
 type style struct {
+	renderer  *lipgloss.Renderer
 	txtStyle  lipgloss.Style
 	quitStyle lipgloss.Style
 }
