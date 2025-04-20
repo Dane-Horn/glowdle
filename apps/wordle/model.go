@@ -1,6 +1,7 @@
 package wordle
 
 import (
+	"slices"
 	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,7 +11,7 @@ import (
 type keyState int
 
 const (
-	emptyKey keyState = iota
+	unknownKey keyState = iota
 	correctKey
 	missingKey
 	presentKey
@@ -21,7 +22,7 @@ type style struct {
 	missingStyle lipgloss.Style
 	correctStyle lipgloss.Style
 	presentStyle lipgloss.Style
-	emptyStyle   lipgloss.Style
+	unknownStyle lipgloss.Style
 }
 
 type key struct {
@@ -31,6 +32,7 @@ type key struct {
 
 type model struct {
 	grid         [5][5]key
+	word         string
 	gameOver     bool
 	currentRow   int
 	currentCol   int
@@ -51,6 +53,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case tea.KeyBackspace:
 			m.removeChar()
+			return m, nil
+		case tea.KeyEnter:
+			if m.currentCol == len(m.grid[0]) {
+				m.validateCurrentRow()
+				m.currentRow++
+				m.currentCol = 0
+			}
 			return m, nil
 		case tea.KeyRunes:
 			if len(msg.Runes) == 1 {
@@ -77,7 +86,22 @@ func (m *model) acceptChar(ch rune) {
 	}
 	m.grid[m.currentRow][m.currentCol] = key{
 		value: unicode.ToUpper(ch),
-		state: correctKey,
+		state: unknownKey,
 	}
 	m.currentCol++
+}
+
+func (m *model) validateCurrentRow() {
+	wordRunes := []rune(m.word)
+	for i, k := range m.grid[m.currentRow] {
+		currKey := m.grid[m.currentRow][i]
+		if i == slices.Index(wordRunes, k.value) {
+			m.grid[m.currentRow][i].state = correctKey
+			wordRunes[i] = -1
+		} else if slices.Contains(wordRunes, currKey.value) {
+			m.grid[m.currentRow][i].state = presentKey
+		} else {
+			m.grid[m.currentRow][i].state = missingKey
+		}
+	}
 }

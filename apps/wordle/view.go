@@ -3,7 +3,15 @@ package wordle
 import "github.com/charmbracelet/lipgloss"
 
 func (m model) View() string {
-	return m.viewRow(m.grid[0][:])
+	return m.viewGrid()
+}
+
+func (m *model) viewGrid() string {
+	rowViews := make([]string, len(m.grid))
+	for i, row := range m.grid {
+		rowViews[i] = m.viewRow(row[:])
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, rowViews...)
 }
 
 func (m *model) viewRow(row []key) string {
@@ -15,7 +23,7 @@ func (m *model) viewRow(row []key) string {
 }
 
 func (m *model) viewKey(key key) string {
-	style := m.emptyStyle
+	style := m.unknownStyle
 	switch key.state {
 	case correctKey:
 		style = m.correctStyle

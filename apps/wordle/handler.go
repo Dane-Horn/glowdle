@@ -16,11 +16,12 @@ func Handler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		correctStyle: blockStyle.Foreground(lipgloss.Color("2")).BorderForeground(lipgloss.Color("2")),
 		presentStyle: blockStyle.Foreground(lipgloss.Color("3")).BorderForeground(lipgloss.Color("3")),
 		missingStyle: blockStyle.Foreground(lipgloss.Color("8")).BorderForeground(lipgloss.Color("8")),
-		emptyStyle:   blockStyle,
+		unknownStyle: blockStyle,
 	}
 
 	m := model{
 		style: &style,
+		word:  "WORDS",
 	}
 	return m, []tea.ProgramOption{tea.WithAltScreen()}
 }
