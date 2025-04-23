@@ -1,7 +1,6 @@
 package wordle
 
 import (
-	"slices"
 	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -31,8 +30,11 @@ type key struct {
 }
 
 type model struct {
-	grid         [5][5]key
+	keyboard     [][]key
+	grid         [][]key
 	word         string
+	wordLength   int
+	numGuesses   int
 	gameOver     bool
 	currentRow   int
 	currentCol   int
@@ -47,6 +49,9 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowHeight = msg.Height
+		m.windowWidth = msg.Width
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
@@ -55,10 +60,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.removeChar()
 			return m, nil
 		case tea.KeyEnter:
-			if m.currentCol == len(m.grid[0]) {
+			if m.currentCol == len(m.grid[0]) && m.currentRow < len(m.grid) {
 				m.validateCurrentRow()
-				m.currentRow++
-				m.currentCol = 0
 			}
 			return m, nil
 		case tea.KeyRunes:
@@ -81,7 +84,7 @@ func (m *model) removeChar() {
 }
 
 func (m *model) acceptChar(ch rune) {
-	if m.currentCol == len(m.grid[0]) {
+	if m.currentCol >= m.wordLength || m.currentRow >= m.numGuesses {
 		return
 	}
 	m.grid[m.currentRow][m.currentCol] = key{
@@ -92,16 +95,24 @@ func (m *model) acceptChar(ch rune) {
 }
 
 func (m *model) validateCurrentRow() {
-	wordRunes := []rune(m.word)
-	for i, k := range m.grid[m.currentRow] {
-		currKey := m.grid[m.currentRow][i]
-		if i == slices.Index(wordRunes, k.value) {
-			m.grid[m.currentRow][i].state = correctKey
-			wordRunes[i] = -1
-		} else if slices.Contains(wordRunes, currKey.value) {
-			m.grid[m.currentRow][i].state = presentKey
-		} else {
-			m.grid[m.currentRow][i].state = missingKey
+	guess := m.grid[m.currentRow]
+	validatedKeys, _ := validateWord(m.word, guess)
+	m.grid[m.currentRow] = validatedKeys
+	m.currentRow++
+	m.currentCol = 0
+	m.updateKeyboard(validatedKeys)
+}
+
+func (m *model) updateKeyboard(validatedKeys []key) {
+	for _, k := range validatedKeys {
+		for i := range m.keyboard {
+			for j := range m.keyboard[i] {
+				if m.keyboard[i][j].value == k.value {
+					if m.keyboard[i][j].state != correctKey {
+						m.keyboard[i][j].state = k.state
+					}
+				}
+			}
 		}
 	}
 }

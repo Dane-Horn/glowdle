@@ -1,9 +1,14 @@
 package wordle
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+)
 
 func (m model) View() string {
-	return m.viewGrid()
+	gridView := m.viewGrid()
+	keyboardView := m.viewKeyboard()
+	view := lipgloss.JoinVertical(lipgloss.Center, gridView, keyboardView)
+	return lipgloss.Place(m.windowWidth, m.windowHeight, lipgloss.Center, lipgloss.Center, view)
 }
 
 func (m *model) viewGrid() string {
@@ -24,6 +29,7 @@ func (m *model) viewRow(row []key) string {
 
 func (m *model) viewKey(key key) string {
 	style := m.unknownStyle
+
 	switch key.state {
 	case correctKey:
 		style = m.correctStyle
@@ -36,4 +42,21 @@ func (m *model) viewKey(key key) string {
 		return style.Render(" ")
 	}
 	return style.Render(string(key.value))
+}
+
+func (m *model) viewKeyboard() string {
+	topRow := m.viewRow(m.keyboard[0])
+	middleRow := m.viewRow(m.keyboard[1])
+	bottomRow := m.viewRow(m.keyboard[2])
+	keyboard := lipgloss.JoinVertical(
+		lipgloss.Center,
+		lipgloss.NewStyle().Padding(0, 2).Render(topRow),
+		lipgloss.NewStyle().Padding(0, 4).Render(middleRow),
+		lipgloss.NewStyle().Padding(0, 0).Render(bottomRow),
+	)
+	return lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(m.unknownStyle.GetForeground()).
+		Padding(0, 1).
+		Render(keyboard)
 }
