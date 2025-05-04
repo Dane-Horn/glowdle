@@ -20,16 +20,15 @@ func Handler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		unknownStyle: blockStyle,
 	}
 
-	m := model{
-		windowWidth:  pty.Window.Width,
-		windowHeight: pty.Window.Height,
-		style:        &style,
-		word:         "SASSY",
-		wordLength:   5,
-		numGuesses:   10,
-		grid:         initialGrid(5, 10),
-		keyboard:     initialKeyboard(),
+	config := modelConfig{
+		pty:        pty,
+		style:      style,
+		db:         connect(),
+		wordLength: 5,
+		numGuesses: 6,
 	}
+
+	m := initialModel(config)
 	return m, []tea.ProgramOption{tea.WithAltScreen()}
 }
 

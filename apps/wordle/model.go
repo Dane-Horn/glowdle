@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/ssh"
 )
 
 type keyState int
@@ -29,18 +30,36 @@ type key struct {
 	state keyState
 }
 
+type modelConfig struct {
+	style
+	pty        ssh.Pty
+	db         *db
+	wordLength int
+	numGuesses int
+}
+
 type model struct {
+	modelConfig
 	keyboard     [][]key
 	grid         [][]key
 	word         string
-	wordLength   int
-	numGuesses   int
 	gameOver     bool
 	currentRow   int
 	currentCol   int
 	windowHeight int
 	windowWidth  int
-	*style
+}
+
+func initialModel(config modelConfig) model {
+	m := model{
+		modelConfig:  config,
+		windowWidth:  config.pty.Window.Width,
+		windowHeight: config.pty.Window.Height,
+		grid:         initialGrid(config.wordLength, config.numGuesses),
+		keyboard:     initialKeyboard(),
+		word:         config.db.getRandomSolution(),
+	}
+	return m
 }
 
 func (m model) Init() tea.Cmd {
@@ -54,6 +73,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.windowWidth = msg.Width
 	case tea.KeyMsg:
 		switch msg.Type {
+		case tea.KeyCtrlR:
+			return initialModel(m.modelConfig), nil
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		case tea.KeyBackspace:
@@ -94,7 +115,19 @@ func (m *model) acceptChar(ch rune) {
 	m.currentCol++
 }
 
+func (m model) currentWord() string {
+	chars := make([]byte, m.wordLength)
+	for i, key := range m.grid[m.currentRow] {
+		chars[i] = byte(key.value)
+	}
+	return string(chars)
+}
+
 func (m *model) validateCurrentRow() {
+	guessWord := m.currentWord()
+	if !m.db.validGuess(guessWord) {
+		return
+	}
 	guess := m.grid[m.currentRow]
 	validatedKeys, _ := validateWord(m.word, guess)
 	m.grid[m.currentRow] = validatedKeys
@@ -104,9 +137,9 @@ func (m *model) validateCurrentRow() {
 }
 
 func (m *model) updateKeyboard(validatedKeys []key) {
-	for _, k := range validatedKeys {
-		for i := range m.keyboard {
-			for j := range m.keyboard[i] {
+	for i := range m.keyboard {
+		for j := range m.keyboard[i] {
+			for _, k := range validatedKeys {
 				if m.keyboard[i][j].value == k.value {
 					if m.keyboard[i][j].state != correctKey {
 						m.keyboard[i][j].state = k.state
